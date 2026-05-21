@@ -1,0 +1,6 @@
+{
+  "name": "기록을 담다",
+  "description": "생각, 감정, 일상 기록을 사진과 함께 차분하고 선명한 피드 형태로 남기는 개인 기록용 웹 어플리케이션입니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

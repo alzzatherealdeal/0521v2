@@ -1,0 +1,52 @@
+{
+  "entities": {
+    "Record": {
+      "title": "Record",
+      "description": "생각, 감정, 일상 기록을 포함하는 일기 엔티티입니다.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "기록 고유 식별자"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "시스템 생성 시간"
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "일기 작성 날짜"
+        },
+        "title": {
+          "type": "string",
+          "description": "일기 제목"
+        },
+        "mood": {
+          "type": "string",
+          "description": "감정 상태 (😊 좋음, 😐 보통, 😢 슬픔, 😡 화남 등)"
+        },
+        "content": {
+          "type": "string",
+          "description": "본문 내용"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Firebase Storage에 저장된 원본 이미지 URL"
+        },
+        "thumbnailUrl": {
+          "type": "string",
+          "description": "Canvas API를 통해 생성된 Base64 경량화 썸네일 데이터"
+        }
+      },
+      "required": ["id", "createdAt", "date", "title", "content"]
+    }
+  },
+  "firestore": {
+    "records": {
+      "schema": "Record",
+      "description": "사용자의 일기 기록들을 모은 컬렉션"
+    }
+  }
+}

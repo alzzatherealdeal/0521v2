@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Noto Sans KR", "Inter", system-ui, -apple-system, sans-serif;
+  --font-serif: "Noto Serif KR", "Playfair Display", Georgia, serif;
+}
+
+/* Custom fade animations and transitions */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Base custom styles to ensure beautiful, comfortable reading */
+body {
+  background-color: #f9fafb; /* Soft gray-white */
+  color: #2d3748; /* Slate gray / dark charcoal */
+  font-family: var(--font-sans);
+}
+
+/* Customized scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #0d9488;
+}

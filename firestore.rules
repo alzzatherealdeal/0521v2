@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 글로벌 안전 장치: 기본 매칭되지 않는 모든 요청 거부
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 기록(records) 컬렉션 보안 규칙
+    match /records/{recordId} {
+      // 리스트 및 겟 읽기는 공용(SPA 특성상 개별 로그인 및 데이터 저장이 전역으로 셋업되기 편하게 허용)
+      allow read: if true;
+
+      // 생성을 위한 철저한 필드 검증 및 타입 안전성, 페이로드 크기 제약 수립
+      allow create: if request.resource.data.keys().hasAll(['id', 'createdAt', 'date', 'title', 'content'])
+                   && request.resource.data.keys().size() <= 8
+                   && request.resource.data.id == recordId
+                   && request.resource.data.createdAt == request.time
+                   && request.resource.data.title is string && request.resource.data.title.size() <= 200
+                   && request.resource.data.content is string && request.resource.data.content.size() <= 10000
+                   && (!('mood' in request.resource.data) || request.resource.data.mood is string && request.resource.data.mood.size() <= 50)
+                   && (!('imageUrl' in request.resource.data) || request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 1000)
+                   && (!('thumbnailUrl' in request.resource.data) || request.resource.data.thumbnailUrl is string && request.resource.data.thumbnailUrl.size() <= 250000);
+
+      // 수정 및 삭제 불가 (기록 영속성 보호)
+      allow update, delete: if false;
+    }
+  }
+}
