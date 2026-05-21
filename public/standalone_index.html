@@ -678,13 +678,40 @@
       }
     }
 
-    function loadSavedFirebaseConfig() {
+    async function loadSavedFirebaseConfig() {
       try {
+        // 1. Try to load auto-configured Workspace Firebase settings dynamically via fetch first
+        let autoConfig = null;
+        try {
+          const response = await fetch("/firebase-applet-config.json");
+          if (response.ok) {
+            autoConfig = await response.json();
+          }
+        } catch (e) {
+          // Fetch failed or not provisioned yet
+        }
+
+        if (autoConfig && autoConfig.apiKey && autoConfig.projectId) {
+          // Fill form values for visibility
+          document.getElementById('fb-apiKey').value = autoConfig.apiKey || '';
+          document.getElementById('fb-authDomain').value = autoConfig.authDomain || '';
+          document.getElementById('fb-projectId').value = autoConfig.projectId || '';
+          document.getElementById('fb-storageBucket').value = autoConfig.storageBucket || '';
+          document.getElementById('fb-messagingSenderId').value = autoConfig.messagingSenderId || '';
+          document.getElementById('fb-appId').value = autoConfig.appId || '';
+
+          const success = await initFirebase(autoConfig);
+          if (success) {
+            showToast("자동 워크스페이스 Firebase 연동이 무사히 가동되었습니다.");
+            return;
+          }
+        }
+
+        // 2. Fallback to manually saved local storage config
         const stored = localStorage.getItem(LOCAL_STORAGE_DB_CONFIG_KEY);
         if (stored) {
           const config = JSON.parse(stored);
           
-          // 양식에 먼저 기입
           document.getElementById('fb-apiKey').value = config.apiKey || '';
           document.getElementById('fb-authDomain').value = config.authDomain || '';
           document.getElementById('fb-projectId').value = config.projectId || '';
@@ -694,7 +721,6 @@
 
           initFirebase(config);
         } else {
-          // 저장된 설정 데이터가 없는 경우 오프라인 로컬 저장 작동
           loadOfflineLocalData();
         }
       } catch (err) {

@@ -22,8 +22,9 @@ service cloud.firestore {
                    && (!('imageUrl' in request.resource.data) || request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 1000)
                    && (!('thumbnailUrl' in request.resource.data) || request.resource.data.thumbnailUrl is string && request.resource.data.thumbnailUrl.size() <= 250000);
 
-      // 수정 및 삭제 불가 (기록 영속성 보호)
-      allow update, delete: if false;
+      // 삭제 기능 및 동기화 무결성 지원을 위해 삭제 허용, 수정은 불가
+      allow delete: if true;
+      allow update: if false;
     }
   }
 }

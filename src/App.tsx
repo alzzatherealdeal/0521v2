@@ -176,6 +176,26 @@ export default function App() {
   }, []);
 
   const loadSavedConfigurations = async () => {
+    // 1. Try to load auto-configured Workspace Firebase settings dynamically via fetch
+    let autoConfig: any = null;
+    try {
+      const response = await fetch("/firebase-applet-config.json");
+      if (response.ok) {
+        autoConfig = await response.json();
+      }
+    } catch (e) {
+      // Fetch failed or not provisioned yet
+    }
+
+    if (autoConfig && autoConfig.apiKey && autoConfig.projectId) {
+      const isSuccessful = await initializeFirebaseSync(autoConfig);
+      if (isSuccessful) {
+        addToast("자동 워크스페이스 Firebase 연동이 무사히 가동되었습니다.");
+        return;
+      }
+    }
+
+    // 2. Fallback to manually saved custom configurations
     const storedConfig = localStorage.getItem("kiror-db-config");
     if (storedConfig) {
       try {
@@ -225,7 +245,9 @@ export default function App() {
         activeApp = initializeApp(config);
       }
 
-      const activeDb = getFirestore(activeApp);
+      const activeDb = (config as any).firestoreDatabaseId 
+        ? getFirestore(activeApp, (config as any).firestoreDatabaseId)
+        : getFirestore(activeApp);
       const activeStorage = getStorage(activeApp);
 
       firebaseRefs.current.db = activeDb;

@@ -1,13 +1,1294 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>기록을 담다 — 나만의 아날로그 감성 일기장</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Noto Sans KR (UI 등 정형 텍스트), Noto Serif KR (일기 본문 텍스트) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans KR"', 'sans-serif'],
+            serif: ['"Noto Serif KR"', 'serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              200: '#99f6e4',
+              500: '#14b8a6',
+              600: '#0d9488',
+              700: '#0f766e',
+              900: '#115e59',
+            },
+            warmgray: {
+              50: '#fcfbf9',
+              100: '#f7f5f0',
+              200: '#ebe7dd',
+              800: '#454038',
+              905: '#2b2824',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* 스크롤바 디자인 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #0d9488;
+    }
+    
+    /* 애니메이션 */
+    @keyframes slideInUp {
+      from { transform: translateY(1rem); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .animate-slide-up {
+      animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    body {
+      background-color: #f7f5f0; /* 클래식 아날로그 한지/아이보리 톤 */
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-[#2b2824] transition-all duration-300">
+
+  <!-- 네비게이션 헤더 -->
+  <header class="border-b border-gray-200 bg-white/80 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <!-- 딥민트 원형 아이콘 -->
+        <div class="w-10 h-10 rounded-full bg-brand-600 flex items-center justify-center text-white shadow-md">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold font-serif tracking-tight text-[#2b2824]">기록을 담다</h1>
+          <p class="text-xs text-brand-700 tracking-wider">나만의 생각, 감정, 일상을 담아내다</p>
+        </div>
+      </div>
+
+      <!-- 우측 설정 및 저장 상태 정보 -->
+      <div class="flex items-center space-x-3">
+        <span id="db-status-badge" class="px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5 transition-all duration-300">
+          <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+          오프라인 저장 모드
+        </span>
+        <button id="btn-show-settings" class="p-2 rounded-full hover:bg-gray-100 text-gray-700 hover:text-brand-600 transition-all" title="Firebase 연동 설정">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066-1.543.94-3.31-.826-2.37-2.37A1.724 1.724 0 005.17 11.23c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 메인 레이아웃 본문 -->
+  <main class="max-w-6xl mx-auto px-4 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- 1. 좌측 영역: 기록 입력 Form (5컬럼) -->
+      <section class="lg:col-span-5 bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm h-fit sticky top-24">
+        <h2 class="text-lg font-bold font-serif mb-6 text-gray-905 flex items-center gap-1.5 border-b border-gray-150 pb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+          오늘의 한 줄 새기기
+        </h2>
+        
+        <form id="record-form" class="space-y-5">
+          <!-- 날짜 입력 -->
+          <div>
+            <label for="input-date" class="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">기록 날짜</label>
+            <input type="date" id="input-date" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition text-sm text-[#2b2824]" required>
+          </div>
+
+          <!-- 제목 입력 -->
+          <div>
+            <label for="input-title" class="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">기록 제목</label>
+            <input type="text" id="input-title" placeholder="어떤 기록인가요? 가볍게 요약해보세요." class="w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition text-sm text-[#2b2824]" required>
+          </div>
+
+          <!-- 기분 선택 버튼형 디자인 -->
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-2.5 uppercase tracking-wider">오늘의 감정</label>
+            <div class="grid grid-cols-3 gap-2" id="mood-selector">
+              <button type="button" data-mood="😊 좋음" class="mood-btn flex flex-col items-center justify-center p-2 rounded-xl border border-gray-200 bg-white hover:border-brand-500 hover:bg-brand-50/50 transition-all group duration-200">
+                <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">😊</span>
+                <span class="text-xs text-gray-600">좋음</span>
+              </button>
+              <button type="button" data-mood="😐 보통" class="mood-btn flex flex-col items-center justify-center p-2 rounded-xl border border-gray-200 bg-white hover:border-brand-500 hover:bg-brand-50/50 transition-all group duration-200">
+                <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">😐</span>
+                <span class="text-xs text-gray-600">보통</span>
+              </button>
+              <button type="button" data-mood="😢 슬픔" class="mood-btn flex flex-col items-center justify-center p-2 rounded-xl border border-gray-200 bg-white hover:border-brand-500 hover:bg-brand-50/50 transition-all group duration-200">
+                <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">😢</span>
+                <span class="text-xs text-gray-600">슬픔</span>
+              </button>
+              <button type="button" data-mood="😡 화남" class="mood-btn flex flex-col items-center justify-center p-2 rounded-xl border border-gray-200 bg-white hover:border-brand-500 hover:bg-brand-50/50 transition-all group duration-200">
+                <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">😡</span>
+                <span class="text-xs text-gray-600">화남</span>
+              </button>
+              <button type="button" data-mood="✨ 설렘" class="mood-btn flex flex-col items-center justify-center p-2 rounded-xl border border-gray-200 bg-white hover:border-brand-500 hover:bg-brand-50/50 transition-all group duration-200">
+                <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">✨</span>
+                <span class="text-xs text-gray-600">설렘</span>
+              </button>
+              <button type="button" data-mood="🌿 편안" class="mood-btn flex flex-col items-center justify-center p-2 rounded-xl border border-gray-200 bg-white hover:border-brand-500 hover:bg-brand-50/50 transition-all group duration-200">
+                <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">🌿</span>
+                <span class="text-xs text-gray-600">편안</span>
+              </button>
+            </div>
+            <!-- 히든 필드에 저장 -->
+            <input type="hidden" id="input-mood" value="😐 보통">
+          </div>
+
+          <!-- 기록 내용 -->
+          <div>
+            <label for="input-content" class="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">나의 이야기</label>
+            <textarea id="input-content" rows="6" placeholder="오늘 있었던 인상 깊은 일, 느꼈던 미묘한 감정을 있는 그대로 문장이 흘러가는 대로 기록해보세요." class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition text-sm text-[#2b2824] leading-relaxed resize-none" required></textarea>
+          </div>
+
+          <!-- 이미지 업로드 & Canvas 썸네일 미리보기 -->
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">사진 남기기</label>
+            <div class="space-y-3">
+              <!-- Drag and Drop 영역 -->
+              <div id="dropzone" class="border-2 border-dashed border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-brand-500 rounded-xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center space-y-1.5">
+                <input type="file" id="input-file" accept="image/*" class="hidden">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <div class="text-xs text-gray-600 font-medium">영역을 클릭하거나 이미지 파일을 드래그하세요</div>
+                <div class="text-[10px] text-gray-400">JPG, PNG 등 이미지 규격 지원</div>
+              </div>
+
+              <!-- Canvas 썸네일 미리보기 영역 -->
+              <div id="thumb-preview-container" class="hidden flex items-center space-x-4 bg-gray-150 p-2.5 rounded-xl border border-gray-200">
+                <div class="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-200 border border-gray-200 flex-shrink-0">
+                  <img id="thumb-preview-img" class="w-full h-full object-cover" alt="썸네일 프리뷰">
+                </div>
+                <div class="flex-1 overflow-hidden">
+                  <p class="text-xs text-gray-700 font-medium truncate" id="thumb-file-name">file_name.jpg</p>
+                  <p class="text-[10px] text-brand-600 font-mono">수정된 150px 경량 썸네일 생성됨</p>
+                </div>
+                <button type="button" id="btn-remove-file" class="p-1 rounded-full text-red-500 hover:bg-red-50 hover:text-red-700 transition">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 제출 저장 버튼 -->
+          <button type="submit" id="btn-save-record" class="w-full py-3.5 px-4 rounded-xl text-white font-semibold text-sm bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-900 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transform active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+            <svg id="save-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+            </svg>
+            <!-- 로딩 스피너 -->
+            <svg id="save-spinner" class="animate-spin h-4 w-4 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span id="save-btn-text">오늘의 기억 보관하기</span>
+          </button>
+        </form>
+      </section>
+
+      <!-- 2. 우측 영역: 기록 피드 목록 및 검색 (7컬럼) -->
+      <section class="lg:col-span-7 space-y-6">
+        
+        <!-- 필터 및 검색 바 -->
+        <article class="bg-white rounded-2xl border border-gray-200 p-4 md:p-5 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+          <!-- 기분 필터링 탭 형태 -->
+          <div class="w-full md:w-auto overflow-x-auto flex space-x-1.5 pb-2 md:pb-0" id="filter-container">
+            <button data-filter="all" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white shadow-sm border border-brand-600 hover:bg-brand-700 transition">전체</button>
+            <button data-filter="😊 좋음" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-brand-600 transition">😊 좋음</button>
+            <button data-filter="😐 보통" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-brand-600 transition">😐 보통</button>
+            <button data-filter="😢 슬픔" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-brand-600 transition">😢 슬픔</button>
+            <button data-filter="😡 화남" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-brand-600 transition">😡 화남</button>
+          </div>
+
+          <!-- 키워드 검색 검색기 -->
+          <div class="relative w-full md:w-60 flex-shrink-0">
+            <input type="text" id="keyword-search" placeholder="기억 검색..." class="w-full pl-9 pr-4 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-xs text-[#2b2824] focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition placeholder-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </article>
+
+        <!-- 피드 리스트 컨테이너 -->
+        <div id="feed-records" class="space-y-4">
+          <!-- 로딩 상태 스켈레톤 -->
+          <div id="feed-loading-skeleton" class="space-y-4">
+            <div class="bg-white rounded-2xl border border-gray-200 p-5 flex items-center justify-between animate-pulse">
+              <div class="flex-1 space-y-3">
+                <div class="h-3 bg-gray-200 rounded w-1/4"></div>
+                <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+                <div class="h-3 bg-gray-200 rounded w-5/6"></div>
+              </div>
+              <div class="w-24 h-24 bg-gray-200 rounded-xl ml-4"></div>
+            </div>
+            <div class="bg-white rounded-2xl border border-gray-200 p-5 flex items-center justify-between animate-pulse">
+              <div class="flex-1 space-y-3">
+                <div class="h-3 bg-gray-200 rounded w-1/4"></div>
+                <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+                <div class="h-3 bg-gray-200 rounded w-2/3"></div>
+              </div>
+              <div class="w-24 h-24 bg-gray-200 rounded-xl ml-4"></div>
+            </div>
+          </div>
+
+          <!-- 기록 없음 일시 렌더링 -->
+          <div id="feed-empty-state" class="hidden bg-white/50 border border-gray-200 rounded-2xl p-12 text-center text-gray-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+            </svg>
+            <p class="font-bold text-sm tracking-wide text-[#2b2824] font-serif mb-1">비어 있는 마음 한 구석</p>
+            <p class="text-xs text-gray-400">아직 등록된 일상 기록이 없습니다. 일기장 처음에 당신의 기분을 채워주세요.</p>
+          </div>
+
+          <!-- 실제 카드들이 위치하는 존 -->
+          <div id="feed-list" class="space-y-4"></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- 드로어 슬라이드 아웃: Firebase 연동 설정 모달 -->
+  <aside id="settings-sidebar" class="fixed inset-y-0 right-0 max-w-lg w-full bg-white shadow-2xl border-l border-gray-200 z-50 transform translate-x-full transition-transform duration-300 ease-in-out">
+    <div class="h-full flex flex-col justify-between">
+      <div class="p-6 md:p-8 overflow-y-auto flex-1">
+        
+        <div class="flex items-center justify-between border-b border-gray-200 pb-4 mb-6">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-brand-600"></span>
+            <h3 class="text-base font-bold text-[#2b2824] font-serif">Firebase 연동 및 동기화 설정</h3>
+          </div>
+          <button id="btn-close-settings" class="p-1 rounded-full hover:bg-gray-100 text-gray-500 hover:text-red-500 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <p class="text-xs text-gray-600 leading-relaxed mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
+          본 앱은 기본적으로 인터넷 연결 없이 쓸 수 있는 <strong>로컬 브라우저 기기 환경(LocalStorage)</strong>으로 시작합니다.<br>
+          안전하고 기기를 넘나드는 동기화가 필요한 경우 Firebase SDK 키를 입력하여 원격 Cloud Firestore 및 Cloud Storage에 안전히 보관하도록 활성화할 수 있습니다.
+        </p>
+
+        <!-- Firebase Config 폼 -->
+        <form id="firebase-config-form" class="space-y-4 text-xs">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">API Key</label>
+            <input type="text" id="fb-apiKey" placeholder="AIzaSy..." class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 focus:outline-none focus:ring-1 focus:ring-brand-500 text-xs">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Auth Domain</label>
+            <input type="text" id="fb-authDomain" placeholder="your-app-id.firebaseapp.com" class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 focus:outline-none focus:ring-1 focus:ring-brand-500 text-xs">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Project ID</label>
+              <input type="text" id="fb-projectId" placeholder="your-app-id" class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 focus:outline-none focus:ring-1 focus:ring-brand-500 text-xs">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Storage Bucket</label>
+              <input type="text" id="fb-storageBucket" placeholder="your-app-id.appspot.com" class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 focus:outline-none focus:ring-1 focus:ring-brand-500 text-xs">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Messaging Sender ID</label>
+              <input type="text" id="fb-messagingSenderId" placeholder="1029384756..." class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 focus:outline-none focus:ring-1 focus:ring-brand-500 text-xs">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">App ID</label>
+              <input type="text" id="fb-appId" placeholder="1:1029384756:web:abcd1234..." class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 focus:outline-none focus:ring-1 focus:ring-brand-500 text-xs">
+            </div>
+          </div>
+          
+          <div class="border-t border-gray-200 pt-6 flex flex-col gap-2">
+            <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg shadow transition text-xs">
+              Firebase 연결 및 적용
+            </button>
+            <button type="button" id="btn-reset-firebase" class="w-full py-2.5 bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 font-semibold rounded-lg transition text-xs text-center">
+              설정 초기화 (로컬 오프라인 모드로 복귀)
+            </button>
+          </div>
+        </form>
+
+      </div>
+      
+      <!-- 하단 저작권 푸터 -->
+      <div class="p-6 border-t border-gray-100 bg-gray-50/50">
+        <p class="text-[10px] text-gray-400 text-center">
+          기록을 담다 © 2026. Designed with beautiful analogue aesthetics.
+        </p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 상세 보기 팝업 모달 -->
+  <dialog id="detail-modal" class="fixed inset-0 z-50 p-0 m-0 w-full h-full max-w-none max-h-none bg-black/60 backdrop-blur-sm transition-opacity duration-300 items-center justify-center flex opacity-0 pointer-events-none">
+    <div class="bg-white rounded-3xl overflow-hidden max-w-2xl w-11/12 max-h-[90vh] flex flex-col border border-gray-200 shadow-2xl relative translate-y-4 scale-95 transition-all duration-300">
+      
+      <!-- 헤더 닫기 액션 -->
+      <div class="absolute right-4 top-4 z-10 flex items-center gap-1.5">
+        <button id="btn-close-modal" class="p-2 rounded-full bg-white/80 hover:bg-white text-[#2b2824] shadow-md hover:text-red-500 hover:scale-105 transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- 모달 스크롤 콘텐츠 -->
+      <div class="overflow-y-auto flex-1">
+        <!-- 원본 고화질 이미지 영역 -->
+        <div id="modal-img-container" class="hidden relative w-full h-64 md:h-80 overflow-hidden bg-gray-50 border-b border-gray-100">
+          <img id="modal-img" class="w-full h-full object-cover" alt="원본 업로드 사진" referrerPolicy="no-referrer">
+          <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/40 to-transparent p-4 h-16 pointer-events-none"></div>
+        </div>
+
+        <div class="p-6 md:p-8 space-y-6">
+          <!-- 상단 태그 메타데이터 -->
+          <div class="flex items-center space-x-3 text-xs tracking-wide">
+            <span id="modal-date" class="px-2.5 py-1 rounded-md bg-gray-100 font-medium text-gray-700 font-mono">2026.05.21</span>
+            <span id="modal-mood" class="px-2.5 py-1 rounded-md bg-brand-50 text-brand-700 border border-brand-100 font-semibold">😊 좋음</span>
+          </div>
+
+          <!-- 일기 제목 -->
+          <h3 id="modal-title" class="text-2xl font-bold font-serif leading-tight text-[#2b2824]">
+            찬란했던 연둣빛의 숲길 산책을 회상하며
+          </h3>
+
+          <!-- 가독성을 극대화한 일기 서술 본문 -->
+          <p id="modal-content" class="text-sm font-serif text-gray-850 leading-8 whitespace-pre-line border-t border-gray-200/60 pt-6 font-medium">
+            여기에 내용이 채워집니다.
+          </p>
+        </div>
+      </div>
+
+      <!-- 모달 푸터 행동 -->
+      <div class="bg-gray-50 px-6 py-4 border-t border-gray-100 flex items-center justify-between text-xs">
+        <span class="text-gray-400 font-mono" id="modal-stamp">저장일시: 2026.05.21 12:45</span>
+        <button id="btn-delete-record" class="flex items-center gap-1.5 text-red-500 hover:text-red-700 font-semibold hover:bg-red-50/70 rounded-lg transition-all px-3 py-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          이 기억 삭제하기
+        </button>
+      </div>
+
+    </div>
+  </dialog>
+
+  <!-- 커스텀 토스트 알림 컨테이너 -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-3 pointer-events-none"></div>
+
+  <!-- FIREBASE SCRIPTS & APPLICATION LOGIC -->
+  <script type="module">
+    // Firebase CDN 모듈러 SDK 가져오기
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, collection, setDoc, deleteDoc, getDocs, onSnapshot, query, orderBy, getDocFromServer } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+    // 글로벌 애플리케이션 상태 변수
+    let app, db, storage;
+    let isFirebaseActive = false;
+    let diaryRecords = [];
+    let currentFilter = 'all';
+    let currentSearchKeyword = '';
+    let uploadedFile = null;
+    let uploadedBase64Thumbnail = null;
+    let uploadedBase64Original = null; // 오프라인용 오리지널 base64
+    let unsubSnapshot = null; // Firestore 스냅샷 해제 핸들러
+
+    // -----------------------------------------------------
+    // 0. 가감 없는 상수들 & 엘리먼트 캐싱
+    // -----------------------------------------------------
+    const elements = {
+      recordForm: document.getElementById('record-form'),
+      inputDate: document.getElementById('input-date'),
+      inputTitle: document.getElementById('input-title'),
+      inputMood: document.getElementById('input-mood'),
+      inputContent: document.getElementById('input-content'),
+      inputFile: document.getElementById('input-file'),
+      dropzone: document.getElementById('dropzone'),
+      thumbPreviewContainer: document.getElementById('thumb-preview-container'),
+      thumbPreviewImg: document.getElementById('thumb-preview-img'),
+      thumbFileName: document.getElementById('thumb-file-name'),
+      btnRemoveFile: document.getElementById('btn-remove-file'),
+      btnSaveRecord: document.getElementById('btn-save-record'),
+      saveIcon: document.getElementById('save-icon'),
+      saveSpinner: document.getElementById('save-spinner'),
+      saveBtnText: document.getElementById('save-btn-text'),
+      feedRecords: document.getElementById('feed-records'),
+      feedLoadingSkeleton: document.getElementById('feed-loading-skeleton'),
+      feedEmptyState: document.getElementById('feed-empty-state'),
+      feedList: document.getElementById('feed-list'),
+      moodBtns: document.querySelectorAll('.mood-btn'),
+      filterBtns: document.querySelectorAll('.filter-btn'),
+      keywordSearch: document.getElementById('keyword-search'),
+      dbStatusBadge: document.getElementById('db-status-badge'),
+      
+      // 모달 엘리먼트
+      detailModal: document.getElementById('detail-modal'),
+      modalInside: document.querySelector('#detail-modal > div'),
+      modalImgContainer: document.getElementById('modal-img-container'),
+      modalImg: document.getElementById('modal-img'),
+      modalDate: document.getElementById('modal-date'),
+      modalMood: document.getElementById('modal-mood'),
+      modalTitle: document.getElementById('modal-title'),
+      modalContent: document.getElementById('modal-content'),
+      modalStamp: document.getElementById('modal-stamp'),
+      btnCloseModal: document.getElementById('btn-close-modal'),
+      btnDeleteRecord: document.getElementById('btn-delete-record'),
+      
+      // 설정 드로어
+      btnShowSettings: document.getElementById('btn-show-settings'),
+      settingsSidebar: document.getElementById('settings-sidebar'),
+      btnCloseSettings: document.getElementById('btn-close-settings'),
+      firebaseConfigForm: document.getElementById('firebase-config-form'),
+      btnResetFirebase: document.getElementById('btn-reset-firebase'),
+      
+      // 토스트
+      toastContainer: document.getElementById('toast-container'),
+    };
+
+    // 오늘 날짜로 기본 셋업
+    const getTodayDateString = () => {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    elements.inputDate.value = getTodayDateString();
+
+    // -----------------------------------------------------
+    // 1. 에러 및 토스트 알림 기능
+    // -----------------------------------------------------
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = "flex items-center space-x-3 p-4 rounded-xl min-w-[280px] max-w-sm bg-white border shadow-lg transition-all duration-300 transform translate-y-2 opacity-0 select-none cursor-pointer border-l-4 pointer-events-auto shadow-teal-50/50 " +
+        (type === 'success' ? 'border-brand-500 border-l-brand-600' : 'border-red-400 border-l-red-500');
+      
+      const successIcon = `
+        <div class="h-6 w-6 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 flex-shrink-0">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+      `;
+      const errorIcon = `
+        <div class="h-6 w-6 rounded-full bg-red-50 flex items-center justify-center text-red-500 flex-shrink-0">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </div>
+      `;
+
+      toast.innerHTML = `
+        ${type === 'success' ? successIcon : errorIcon}
+        <div class="flex-1 text-xs font-semibold text-gray-900">${message}</div>
+      `;
+
+      elements.toastContainer.appendChild(toast);
+
+      // Animation triggers
+      setTimeout(() => {
+        toast.style.opacity = "1";
+        toast.style.transform = "translateY(0)";
+      }, 50);
+
+      const dismiss = () => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(1.5rem)";
+        setTimeout(() => {
+          toast.remove();
+        }, 300);
+      };
+
+      toast.addEventListener('click', dismiss);
+      setTimeout(dismiss, 3500); // 3.5초 후 자가 삭제
+    }
+
+    // -----------------------------------------------------
+    // 2. Local Storage 백업 및 연동 엔진
+    // -----------------------------------------------------
+    const LOCAL_STORAGE_RECORDS_KEY = 'kiror-records';
+    const LOCAL_STORAGE_DB_CONFIG_KEY = 'kiror-db-config';
+
+    function getLocalRecords() {
+      try {
+        const stored = localStorage.getItem(LOCAL_STORAGE_RECORDS_KEY);
+        return stored ? JSON.parse(stored) : [];
+      } catch (err) {
+        console.error("로컬 스토리지 일기 데이터를 파싱하지 못했습니다: ", err);
+        return [];
+      }
+    }
+
+    function saveLocalRecords(records) {
+      localStorage.setItem(LOCAL_STORAGE_RECORDS_KEY, JSON.stringify(records));
+    }
+
+    // -----------------------------------------------------
+    // 3. Canvas API 일기 이미지 축소 가공 (맥스 가로/세로 150px)
+    // -----------------------------------------------------
+    function compressImageAndGetThumbnail(file, maxDimension = 150) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > maxDimension) {
+                height = Math.round((height * maxDimension) / width);
+                width = maxDimension;
+              }
+            } else {
+              if (height > maxDimension) {
+                width = Math.round((width * maxDimension) / height);
+                height = maxDimension;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // 품질 0.82 압축 Base64 주소 반환
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+            resolve(dataUrl);
+          };
+          img.onerror = (err) => reject(err);
+          img.src = e.target.result;
+        };
+        reader.onerror = (err) => reject(err);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // 오리지널 해상도의 Base64 데이터 추출 버퍼 (오프라인 모드에서 사용할 목적)
+    function readAsDataURLAsync(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (err) => reject(err);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // -----------------------------------------------------
+    // 4. Firebase 초기화 및 동적 연동 프로세스
+    // -----------------------------------------------------
+    function updateConnectionBadge() {
+      if (isFirebaseActive) {
+        elements.dbStatusBadge.innerHTML = `
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          Firebase 클라우드 연동 활성
+        `;
+        elements.dbStatusBadge.className = "px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5 transition-all duration-300 animate-pulse";
+      } else {
+        elements.dbStatusBadge.innerHTML = `
+          <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+          오프라인 저장 모드
+        `;
+        elements.dbStatusBadge.className = "px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5 transition-all duration-300";
+      }
+    }
+
+    async function initFirebase(config) {
+      try {
+        if (!config || !config.apiKey) {
+          throw new Error("비어있는 설정 값");
+        }
+        
+        // 초기화 시도
+        app = initializeApp(config);
+        
+        // Firestore 연결
+        db = getFirestore(app);
+        
+        // Storage 연결
+        storage = getStorage(app);
+
+        // 연결 유효성 비동기 검사
+        try {
+          await getDocFromServer(doc(db, 'test', 'connection'));
+        } catch (err) {
+          // 오프라인 상태가 아닌 퍼미션 지연 등의 에러가 발생한 건 패스 가능
+          if (err.message && err.message.includes('the client is offline')) {
+            throw new Error("서버와의 오프라인 연결 통신 지체");
+          }
+        }
+
+        isFirebaseActive = true;
+        updateConnectionBadge();
+        
+        // Firestore에서 실시간 피드 업데이트 바인딩
+        bindRealtimeFirestoreFeed();
+        return true;
+      } catch (err) {
+        console.error("Firebase 초기화 중 에러가 발생했습니다. 오프라인 모드로 자동 보호됩니다.\n", err);
+        isFirebaseActive = false;
+        updateConnectionBadge();
+        loadOfflineLocalData();
+        return false;
+      }
+    }
+
+    async function loadSavedFirebaseConfig() {
+      try {
+        // 1. Try to load auto-configured Workspace Firebase settings dynamically via fetch first
+        let autoConfig = null;
+        try {
+          const response = await fetch("/firebase-applet-config.json");
+          if (response.ok) {
+            autoConfig = await response.json();
+          }
+        } catch (e) {
+          // Fetch failed or not provisioned yet
+        }
+
+        if (autoConfig && autoConfig.apiKey && autoConfig.projectId) {
+          // Fill form values for visibility
+          document.getElementById('fb-apiKey').value = autoConfig.apiKey || '';
+          document.getElementById('fb-authDomain').value = autoConfig.authDomain || '';
+          document.getElementById('fb-projectId').value = autoConfig.projectId || '';
+          document.getElementById('fb-storageBucket').value = autoConfig.storageBucket || '';
+          document.getElementById('fb-messagingSenderId').value = autoConfig.messagingSenderId || '';
+          document.getElementById('fb-appId').value = autoConfig.appId || '';
+
+          const success = await initFirebase(autoConfig);
+          if (success) {
+            showToast("자동 워크스페이스 Firebase 연동이 무사히 가동되었습니다.");
+            return;
+          }
+        }
+
+        // 2. Fallback to manually saved local storage config
+        const stored = localStorage.getItem(LOCAL_STORAGE_DB_CONFIG_KEY);
+        if (stored) {
+          const config = JSON.parse(stored);
+          
+          document.getElementById('fb-apiKey').value = config.apiKey || '';
+          document.getElementById('fb-authDomain').value = config.authDomain || '';
+          document.getElementById('fb-projectId').value = config.projectId || '';
+          document.getElementById('fb-storageBucket').value = config.storageBucket || '';
+          document.getElementById('fb-messagingSenderId').value = config.messagingSenderId || '';
+          document.getElementById('fb-appId').value = config.appId || '';
+
+          initFirebase(config);
+        } else {
+          loadOfflineLocalData();
+        }
+      } catch (err) {
+        loadOfflineLocalData();
+      }
+    }
+
+    function loadOfflineLocalData() {
+      isFirebaseActive = false;
+      updateConnectionBadge();
+      
+      // 혹은 연결되어 있던 Firestore 스트림 연결 해제
+      if (unsubSnapshot) {
+        unsubSnapshot();
+        unsubSnapshot = null;
+      }
+
+      elements.feedLoadingSkeleton.classList.add('hidden');
+      diaryRecords = getLocalRecords();
+      renderFeedAndTimeline();
+    }
+
+    // -----------------------------------------------------
+    // 5. 복수의 피드 렌더링 매니저 (기억 목록 표시)
+    // -----------------------------------------------------
+    function renderFeedAndTimeline() {
+      // 1. 필터링 처리
+      let filtered = diaryRecords;
+      if (currentFilter !== 'all') {
+        filtered = filtered.filter(item => item.mood === currentFilter);
+      }
+
+      // 2. 검색 처리
+      if (currentSearchKeyword.trim() !== '') {
+        const keyword = currentSearchKeyword.toLowerCase();
+        filtered = filtered.filter(item => 
+          item.title.toLowerCase().includes(keyword) || 
+          item.content.toLowerCase().includes(keyword)
+        );
+      }
+
+      // 3. 최신순 정렬 (날짜 기준 내림차순, 날짜가 같으면 작성일시 내림차순)
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (dateA !== dateB) {
+          return dateB - dateA;
+        }
+        return b.createdAt - a.createdAt;
+      });
+
+      // 4. 안전 스켈레톤 및 빈 화면 핸들링
+      elements.feedLoadingSkeleton.classList.add('hidden');
+      elements.feedList.innerHTML = '';
+
+      if (filtered.length === 0) {
+        elements.feedEmptyState.classList.remove('hidden');
+        return;
+      } else {
+        elements.feedEmptyState.classList.add('hidden');
+      }
+
+      // 5. 실제 도출된 카드 컴파일 및 화면 정렬
+      filtered.forEach(record => {
+        const card = document.createElement('div');
+        // 애니메이션 효과 및 감각적인 테두리 디자인 수립
+        card.className = "group bg-white rounded-2xl border border-gray-200 p-5 md:p-6 shadow-sm hover:shadow-md hover:-translate-y-[2px] transition-all duration-300 md:flex flex-row items-center gap-5 cursor-pointer select-none animate-slide-up relative overflow-hidden";
+        card.id = `card-${record.id}`;
+        
+        // 날짜 가볍게 파싱
+        const formattedDate = record.date ? record.date.replace(/-/g, '.') : '';
+
+        // 카드 썸네일 이미지 영역
+        let imageSectionHtml = '';
+        if (record.thumbnailUrl || record.imageUrl) {
+          // 썸네일이 우선하되, 썸네일이 없는 경우 원본 주소로 대처
+          const imgSource = record.thumbnailUrl || record.imageUrl;
+          imageSectionHtml = `
+            <div class="w-full md:w-24 h-48 md:h-24 rounded-xl overflow-hidden bg-gray-100 border border-gray-150 flex-shrink-0 mb-4 md:mb-0 transition group-hover:scale-[1.02] duration-300">
+              <img src="${imgSource}" class="w-full h-full object-cover" alt="일기 사진 썸네일" referrerPolicy="no-referrer" loading="lazy">
+            </div>
+          `;
+        }
+
+        // 일기 내용 요약 (약 80자 내외 절삭)
+        const contentSummary = record.content.length > 85 ? record.content.substring(0, 85) + '...' : record.content;
+
+        card.innerHTML = `
+          <div class="flex-1 space-y-2.5">
+            <div class="flex items-center space-x-2 text-xs">
+              <span class="font-mono text-gray-400 font-semibold">${formattedDate}</span>
+              <span class="px-2 py-0.5 rounded bg-brand-50 text-brand-700 font-bold border border-brand-100/50 scale-95 origin-left">${record.mood}</span>
+            </div>
+            <h4 class="text-sm md:text-base font-bold text-gray-900 group-hover:text-brand-600 transition duration-200 leading-snug font-serif flex items-center justify-between">
+              ${escapeHtml(record.title)}
+            </h4>
+            <p class="text-xs md:text-sm text-gray-600 leading-relaxed font-sans line-clamp-2 md:line-clamp-3">
+              ${escapeHtml(contentSummary)}
+            </p>
+          </div>
+          ${imageSectionHtml}
+        `;
+
+        // 카드 컴포넌트에 직접 인메모리 데이터를 바인딩하여 안전하고 직관적인 디테일 열기 촉진
+        card.addEventListener('click', () => {
+          openDetailModal(record);
+        });
+
+        elements.feedList.appendChild(card);
+      });
+    }
+
+    // Firestore 실시간 스냅샷 리스너 바인딩
+    function bindRealtimeFirestoreFeed() {
+      if (unsubSnapshot) unsubSnapshot(); // 기존 핸들 강제 제거
+      
+      elements.feedLoadingSkeleton.classList.remove('hidden');
+      elements.feedEmptyState.classList.add('hidden');
+      elements.feedList.innerHTML = '';
+      
+      const q = query(collection(db, "records"), orderBy("createdAt", "desc"));
+      unsubSnapshot = onSnapshot(q, (snapshot) => {
+        diaryRecords = [];
+        snapshot.forEach((doc) => {
+          diaryRecords.push({ id: doc.id, ...doc.data() });
+        });
+        
+        elements.feedLoadingSkeleton.classList.add('hidden');
+        renderFeedAndTimeline();
+      }, (error) => {
+        console.error("데이터 실시간 로드 권한 에러 및 거부: ", error);
+        showToast("서버로부터 데이터를 실시간 조회할 권한이 없거나 설정이 올바르지 않습니다.", "error");
+        
+        // 오프라인 모드로 세이프 백업 자동 작동
+        loadOfflineLocalData();
+      });
+    }
+
+    // -----------------------------------------------------
+    // 6. 이미지 업로드 드롭존 & Canvas 가압축 핸들링
+    // -----------------------------------------------------
+    function handleImageSelection(file) {
+      if (!file) return;
+      
+      if (!file.type.startsWith('image/')) {
+        showToast("이미지 파일 형식만 업로드할 수 있습니다.", "error");
+        return;
+      }
+
+      uploadedFile = file;
+      elements.thumbFileName.textContent = file.name;
+      
+      // 이미지 압축 및 Base64 썸네일 변환 과정 개시
+      compressImageAndGetThumbnail(file, 150)
+        .then(base64Url => {
+          uploadedBase64Thumbnail = base64Url;
+          elements.thumbPreviewImg.src = base64Url;
+          elements.thumbPreviewContainer.classList.remove('hidden');
+          elements.dropzone.classList.add('hidden');
+        })
+        .catch(err => {
+          console.error("Canvas 이미지 조절 실패: ", err);
+          showToast("이미지를 압축(썸네일 생성) 처리하는 데 실패했습니다.", "error");
+        });
+
+      // 오프라인 저장을 대비한 원본의 Base64도 비동기 로드
+      readAsDataURLAsync(file)
+        .then(base64Original => {
+          uploadedBase64Original = base64Original;
+        });
+    }
+
+    // 이벤트 리스너: 드래그 앤 드롭
+    elements.dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      elements.dropzone.classList.remove('bg-gray-50');
+      elements.dropzone.classList.add('bg-gray-100', 'border-brand-500');
+    });
+
+    elements.dropzone.addEventListener('dragleave', () => {
+      elements.dropzone.classList.remove('bg-gray-100', 'border-brand-500');
+      elements.dropzone.classList.add('bg-gray-50');
+    });
+
+    elements.dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      elements.dropzone.classList.remove('bg-gray-100', 'border-brand-500');
+      elements.dropzone.classList.add('bg-gray-50');
+      
+      const file = e.dataTransfer.files[0];
+      handleImageSelection(file);
+    });
+
+    // 영역 클릭으로 파일 업로드 유인
+    elements.dropzone.addEventListener('click', () => {
+      elements.inputFile.click();
+    });
+
+    elements.inputFile.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      handleImageSelection(file);
+    });
+
+    // 업로드된 이미지 취소 및 되돌리기
+    elements.btnRemoveFile.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resetUploadedImageState();
+    });
+
+    function resetUploadedImageState() {
+      uploadedFile = null;
+      uploadedBase64Thumbnail = null;
+      uploadedBase64Original = null;
+      elements.inputFile.value = '';
+      elements.thumbPreviewImg.src = '';
+      elements.thumbPreviewContainer.classList.add('hidden');
+      elements.dropzone.classList.remove('hidden');
+    }
+
+    // -----------------------------------------------------
+    // 7. 감정 선택 이모지 버튼 그룹 매칭 및 제어
+    // -----------------------------------------------------
+    elements.moodBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        // 기존 활성 리셋
+        elements.moodBtns.forEach(b => {
+          b.classList.remove('border-brand-500', 'bg-brand-50', 'ring-2', 'ring-brand-500/20');
+          b.classList.add('border-gray-200', 'bg-white');
+        });
+
+        // 클릭된 타겟 활성화
+        btn.classList.remove('border-gray-200', 'bg-white');
+        btn.classList.add('border-brand-500', 'bg-brand-50', 'ring-2', 'ring-brand-500/20');
+        
+        // 이모지 상태값 지정
+        const selectedMood = btn.getAttribute('data-mood');
+        elements.inputMood.value = selectedMood;
+      });
+    });
+
+    // 기본 "보통" 기분 미리 강제 활성화 터치
+    elements.moodBtns[1].click();
+
+    // -----------------------------------------------------
+    // 8. 기록 보관(저장) 처리
+    // -----------------------------------------------------
+    elements.recordForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const dateVal = elements.inputDate.value;
+      const titleVal = elements.inputTitle.value.trim();
+      const moodVal = elements.inputMood.value;
+      const contentVal = elements.inputContent.value.trim();
+
+      // 철저한 유효성 정합 검증
+      if (!dateVal || !titleVal || !contentVal) {
+        showToast("날짜, 제목, 내용은 필수로 입력해야 하는 항목입니다.", "error");
+        return;
+      }
+
+      // 로딩 스피너 및 비활성 UI 전환
+      toggleSaveButtonLoading(true);
+
+      const recordId = "doc_" + Date.now() + "_" + Math.random().toString(36).substring(2, 9);
+      const createdAtTimestamp = Date.now();
+
+      try {
+        let finalImageUrl = '';
+
+        if (isFirebaseActive) {
+          // A. Firebase 클라우드 연동 액티브 상태일 때
+          if (uploadedFile) {
+            try {
+              const fileExtension = uploadedFile.name.split('.').pop() || 'jpg';
+              const storageFileName = `images/${recordId}_original.${fileExtension}`;
+              const storageRef = ref(storage, storageFileName);
+              
+              // 파일 업로드 수행
+              const uploadResult = await uploadBytes(storageRef, uploadedFile);
+              // 파일 다이렉트 영구 호출 URL 획득
+              finalImageUrl = await getDownloadURL(uploadResult.ref);
+            } catch (err) {
+              console.error("Firebase Storage 업로드 에러: ", err);
+              throw new Error("이미지 파일을 클라우드 스토리지에 올리는 도중 오류가 발생했습니다.");
+            }
+          }
+
+          // Firestore 업로드 명세 준비
+          const firestoreDocumentPayload = {
+            id: recordId,
+            createdAt: new Date(), // Firebase rules에서 request.time 체크에 매칭하기 위해 서버 객체 구조로 반영
+            date: dateVal,
+            title: titleVal,
+            mood: moodVal,
+            content: contentVal,
+            imageUrl: finalImageUrl,
+            thumbnailUrl: uploadedBase64Thumbnail || ''
+          };
+
+          // 문서 쓰기 실행
+          await setDoc(doc(db, "records", recordId), firestoreDocumentPayload);
+        } else {
+          // B. 로컬 브라우저 기기 환경 모드일 때
+          if (uploadedBase64Original) {
+            finalImageUrl = uploadedBase64Original; // 오프라인 모드에서는 Base64 인코딩 원본 삽입
+          }
+
+          const localDocumentPayload = {
+            id: recordId,
+            createdAt: createdAtTimestamp,
+            date: dateVal,
+            title: titleVal,
+            mood: moodVal,
+            content: contentVal,
+            imageUrl: finalImageUrl,
+            thumbnailUrl: uploadedBase64Thumbnail || ''
+          };
+
+          // 로컬 데이터 적재 및 쓰기
+          const currentRecords = getLocalRecords();
+          currentRecords.unshift(localDocumentPayload);
+          saveLocalRecords(currentRecords);
+          
+          // 전역 인메모리 동기화 및 렌더링 호출
+          diaryRecords = currentRecords;
+          renderFeedAndTimeline();
+        }
+
+        // 폼 리셋 및 미학적 토스트 알림 작동
+        elements.recordForm.reset();
+        elements.inputDate.value = getTodayDateString();
+        elements.moodBtns[1].click(); // '보통' 리셋
+        resetUploadedImageState();
+        showToast("당신의 소중한 하루 기록이 보관되었습니다.");
+        
+      } catch (err) {
+        console.error("기록 인덱싱 오류: ", err);
+        showToast(err.message || "기록을 안전히 저장하지 못했습니다. 형식을 재확인 하거나 Firebase 보안 규칙 수정을 검토해주세요.", "error");
+      } finally {
+        toggleSaveButtonLoading(false);
+      }
+    });
+
+    function toggleSaveButtonLoading(isLoading) {
+      if (isLoading) {
+        elements.btnSaveRecord.disabled = true;
+        elements.saveIcon.classList.add('hidden');
+        elements.saveSpinner.classList.remove('hidden');
+        elements.saveBtnText.textContent = "보관 저장하는 중...";
+      } else {
+        elements.btnSaveRecord.disabled = false;
+        elements.saveIcon.classList.remove('hidden');
+        elements.saveSpinner.classList.add('hidden');
+        elements.saveBtnText.textContent = "오늘의 기억 보관하기";
+      }
+    }
+
+    // -----------------------------------------------------
+    // 9. 실시간 피드 필터 제어 & 검색 매치
+    // -----------------------------------------------------
+    elements.filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        elements.filterBtns.forEach(b => {
+          b.className = "filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-brand-600 transition";
+        });
+
+        // 액티브 버튼 컬러 전환
+        btn.className = "filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white shadow-sm border border-brand-600 hover:bg-brand-700 transition";
+        
+        currentFilter = btn.getAttribute('data-filter');
+        renderFeedAndTimeline();
+      });
+    });
+
+    elements.keywordSearch.addEventListener('input', (e) => {
+      currentSearchKeyword = e.target.value;
+      renderFeedAndTimeline();
+    });
+
+    // HTML 태그 탈출 이중 보안 유틸
+    function escapeHtml(str) {
+      if (typeof str !== 'string') return '';
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        .replace(/\//g, '&#x2F;');
+    }
+
+    // -----------------------------------------------------
+    // 10. 기민하게 반응하는 일기 상세 모달 제어
+    // -----------------------------------------------------
+    let modalSelectedRecord = null;
+
+    function openDetailModal(record) {
+      modalSelectedRecord = record;
+
+      // 이미지 처리
+      if (record.imageUrl) {
+        elements.modalImg.src = record.imageUrl;
+        elements.modalImgContainer.classList.remove('hidden');
+      } else if (record.thumbnailUrl) {
+        elements.modalImg.src = record.thumbnailUrl;
+        elements.modalImgContainer.classList.remove('hidden');
+      } else {
+        elements.modalImg.src = '';
+        elements.modalImgContainer.classList.add('hidden');
+      }
+
+      // 날짜, 기분, 제목, 내용 기입
+      const formattedDate = record.date ? record.date.replace(/-/g, '.') : '';
+      elements.modalDate.textContent = formattedDate;
+      elements.modalMood.textContent = record.mood;
+      elements.modalTitle.textContent = record.title;
+      elements.modalContent.textContent = record.content;
+
+      // 백업 생성 기준 상세 정보 출력
+      const creationDateRef = record.createdAt ? (typeof record.createdAt === 'object' && record.createdAt.toDate ? record.createdAt.toDate() : new Date(record.createdAt)) : new Date();
+      const formatTime = (d) => {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      };
+      elements.modalStamp.textContent = `보관 시간: ${formatTime(creationDateRef)}`;
+
+      // 열림 애니메이션 및 제어 작동
+      elements.detailModal.classList.remove('opacity-0', 'pointer-events-none');
+      elements.detailModal.classList.add('opacity-100', 'pointer-events-auto');
+      
+      const insideDiv = elements.detailModal.querySelector('div');
+      insideDiv.classList.remove('translate-y-4', 'scale-95');
+      insideDiv.classList.add('translate-y-0', 'scale-100');
+    }
+
+    function closeModal() {
+      // 닫힘 애니메이션 복귀
+      elements.detailModal.classList.add('opacity-0', 'pointer-events-none');
+      elements.detailModal.classList.remove('opacity-100', 'pointer-events-auto');
+      
+      const insideDiv = elements.detailModal.querySelector('div');
+      insideDiv.classList.add('translate-y-4', 'scale-95');
+      insideDiv.classList.remove('translate-y-0', 'scale-100');
+      
+      // 버퍼 비우기
+      modalSelectedRecord = null;
+    }
+
+    elements.btnCloseModal.addEventListener('click', closeModal);
+    elements.detailModal.addEventListener('click', (e) => {
+      // 바깥 여백 클릭 감지하여 모달 닫기 안착
+      if (e.target === elements.detailModal) {
+        closeModal();
+      }
+    });
+
+    // -----------------------------------------------------
+    // 11. 기록 삭제 제어
+    // -----------------------------------------------------
+    elements.btnDeleteRecord.addEventListener('click', async () => {
+      if (!modalSelectedRecord) return;
+
+      const confirmResult = confirm("정말로 이 소중한 기억을 지워 보관함에서 제외하시겠습니까?");
+      if (!confirmResult) return;
+
+      const deleteTargetId = modalSelectedRecord.id;
+
+      try {
+        if (isFirebaseActive) {
+          // A. Firebase 스토어에서 문서를 완전 파괴
+          
+          // 우선 이미지가 Storage에 업로드된 경우 가차없이 삭제 병행
+          if (modalSelectedRecord.imageUrl && modalSelectedRecord.imageUrl.includes('firebasestorage')) {
+            try {
+              // URL 디코딩을 통해 스토리지 Ref 포인터 추출
+              const decodedUrl = decodeURIComponent(modalSelectedRecord.imageUrl);
+              const pathPart = decodedUrl.split('/o/')[1].split('?')[0];
+              const fileRef = ref(storage, pathPart);
+              await deleteObject(fileRef);
+            } catch (imageDelErr) {
+              console.warn("Storage의 연관 파일을 파괴하지 못하였습니다 (이미 수동 삭제되었을 수 있습니다): ", imageDelErr);
+            }
+          }
+
+          // Firestore 도큐먼트 사살
+          await deleteDoc(doc(db, "records", deleteTargetId));
+          showToast("클라우드 보관함에서 기억이 소멸되었습니다.");
+        } else {
+          // B. 기기 로컬 모드에서 격하 및 제외
+          let currentRecords = getLocalRecords();
+          currentRecords = currentRecords.filter(item => item.id !== deleteTargetId);
+          saveLocalRecords(currentRecords);
+          
+          diaryRecords = currentRecords;
+          renderFeedAndTimeline();
+          showToast("로컬 기기 보관함에서 기억을 안전히 제외하였습니다.");
+        }
+
+        // 모달 닫고 목록 재정렬 반영
+        closeModal();
+        
+      } catch (err) {
+        console.error("데이터 삭제 영구 실패: ", err);
+        showToast("데이터 삭제 프로세스를 완료하지 못하였습니다: " + err.message, "error");
+      }
+    });
+
+    // -----------------------------------------------------
+    // 12. Firebase 수동 동적 연동 구성 드로어 작동
+    // -----------------------------------------------------
+    elements.btnShowSettings.addEventListener('click', () => {
+      elements.settingsSidebar.classList.remove('translate-x-full');
+    });
+
+    elements.btnCloseSettings.addEventListener('click', () => {
+      elements.settingsSidebar.classList.add('translate-x-full');
+    });
+
+    elements.firebaseConfigForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const newConfig = {
+        apiKey: document.getElementById('fb-apiKey').value.trim(),
+        authDomain: document.getElementById('fb-authDomain').value.trim(),
+        projectId: document.getElementById('fb-projectId').value.trim(),
+        storageBucket: document.getElementById('fb-storageBucket').value.trim(),
+        messagingSenderId: document.getElementById('fb-messagingSenderId').value.trim(),
+        appId: document.getElementById('fb-appId').value.trim(),
+        firestoreDatabaseId: "(default)"
+      };
+
+      if (!newConfig.apiKey || !newConfig.projectId) {
+        showToast("필수 SDK 입력값이 누락되어 있습니다.", "error");
+        return;
+      }
+
+      showToast("Firebase 모듈 컴파일 및 정합 보안 채널 확인 중...");
+      const success = await initFirebase(newConfig);
+
+      if (success) {
+        localStorage.setItem(LOCAL_STORAGE_DB_CONFIG_KEY, JSON.stringify(newConfig));
+        showToast("Firebase 원격 실시간 데이터 동기화 활성 완료!");
+        elements.settingsSidebar.classList.add('translate-x-full');
+      } else {
+        showToast("제공해주신 Firebase 설정값이 잘못되었거나 네트워크 정체입니다. 로컬 모드로 우회 복귀합니다.", "error");
+      }
+    });
+
+    elements.btnResetFirebase.addEventListener('click', () => {
+      localStorage.removeItem(LOCAL_STORAGE_DB_CONFIG_KEY);
+      
+      // 폼 비우기
+      document.getElementById('fb-apiKey').value = '';
+      document.getElementById('fb-authDomain').value = '';
+      document.getElementById('fb-projectId').value = '';
+      document.getElementById('fb-storageBucket').value = '';
+      document.getElementById('fb-messagingSenderId').value = '';
+      document.getElementById('fb-appId').value = '';
+
+      loadOfflineLocalData();
+      showToast("로컬 오프라인 데이터 모드로 안전전환 하였습니다.");
+      elements.settingsSidebar.classList.add('translate-x-full');
+    });
+
+    // 초기 구동 개시
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSavedFirebaseConfig();
+    });
+  </script>
+</body>
+</html>
